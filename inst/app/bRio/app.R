@@ -9,8 +9,8 @@ library(Rvision)
 ##### GLOBAL #####
 if (Sys.info()["sysname"] == "Linux") {
     cam_ids <- system("v4l2-ctl --list-devices", intern = TRUE)
-    cam_ids <- grep("brio", cams, ignore.case = TRUE) + 1
-    cam_ids <- as.numeric(gsub("\t/dev/video", "", cams[idx]))
+    ix <- grep("brio", cam_ids, ignore.case = TRUE) + 1
+    cam_ids <- as.numeric(gsub("\t/dev/video", "", cams[ix]))
 } else {
     # stop("Unsupported platform.")
     cam_ids <- 0
@@ -125,13 +125,25 @@ server <- function(input, output, session) {
     })
 
     observe({
+        if (!is.null(input$camera)) {
+            ix <- as.numeric(gsub("Camera ", "", input$camera))
+            updateSwitchInput(session, "autoexposure",
+                              getProp(cams[[ix]], "AUTO_EXPOSURE") == 3)
+            updateSliderInput(session, "exposure", getProp(cams[[ix]], "EXPOSURE"))
+            updateSwitchInput(session, "autofocus",
+                              getProp(cams[[ix]], "autofocus") == 1)
+            updateSliderInput(session, "focus", getProp(cams[[ix]], "FOCUS"))
+        }
+    })
+
+    observe({
         invalidateLater(1000 / 30, session)
 
         if (!is.null(input$camera)) {
             ix <- as.numeric(gsub("Camera ", "", input$camera))
-            # display(readNext(cams[[ix]]), delay = 1,
-            #         height = nrow(cams[[ix]]) * input$displaySize,
-            #         width = ncol(cams[[ix]]) * input$displaySize)
+            display(readNext(cams[[ix]]), delay = 1,
+                    height = nrow(cams[[ix]]) * input$displaySize,
+                    width = ncol(cams[[ix]]) * input$displaySize)
         }
     })
 
