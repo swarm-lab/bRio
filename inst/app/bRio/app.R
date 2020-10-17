@@ -10,19 +10,34 @@ library(Rvision)
 if (Sys.info()["sysname"] == "Linux") {
     cam_ids <- system("v4l2-ctl --list-devices", intern = TRUE)
     ix <- grep("brio", cam_ids, ignore.case = TRUE) + 1
-    cam_ids <- as.numeric(gsub("\t/dev/video", "", cams[ix]))
+    cam_ids <- as.numeric(gsub("\t/dev/video", "", cam_ids[ix]))
 } else {
-    # stop("Unsupported platform.")
-    cam_ids <- 0
+    stop("Unsupported platform.")
+    # cam_ids <- 0
 }
 
 cams <- lapply(cam_ids, function(x) {
-    st <- stream(x)
+    st <- stream(x, api = "V4L2")
+    # st <- stream(x)
     setProp(st, "FOURCC", fourcc("MJPG"))
     setProp(st, "FRAME_WIDTH", 4096)
     setProp(st, "FRAME_HEIGHT", 2160)
     st
 })
+
+zoom <- function(img, f) {
+    if (f < 1)
+        stop("Incompatible zoom factor")
+
+    w <- ncol(img) / f
+    h <- nrow(img) / f
+    x <- 1 + (ncol(img) - w) / 2
+    y <- 1 + (nrow(img) - h) / 2
+
+    resize(subImage(img, x, y, w, h), nrow(img), ncol(img), interpolation = "cubic")
+}
+
+volumes <- getVolumes()
 
 
 ##### UI #####
@@ -43,15 +58,22 @@ ui <- fluidPage(
                 heading = tags$table(
                     width = "100%",
                     tags$tr(
-                        tags$td(width = "100%", h4("Select a camera")),
+                        tags$td(width = "95%", h4("Select a camera")),
                         tags$td(width = "0%",
                                 pickerInput("camera", NULL, width = "100%",
-                                            choices = NULL))
+                                            choices = NULL)),
+                        tags$td(width = "5%"),
+                        tags$td(width = "0%",
+                                switchInput("display", NULL, TRUE, inline = TRUE,
+                                            onStatus = "success", offStatus = "danger", size = "small")
+                        )
                     )
                 ),
 
                 sliderInput("displaySize", "Display size", width = "100%",
-                            value = 1, min = 0.1, max = 1, step = 0.1)
+                            value = 0.2, min = 0.1, max = 1, step = 0.1),
+                sliderInput("zoom", "Zoom", width = "100%",
+                            value = 1, min = 1, max = 5, step = 0.1)
             ),
 
             panel(heading = tags$table(
@@ -60,7 +82,8 @@ ui <- fluidPage(
                     tags$td(width = "100%", h4("Autofocus")),
                     tags$td(width = "0%",
                             switchInput("autofocus", NULL, TRUE, inline = TRUE,
-                                        onStatus = "success", offStatus = "danger", size = "small"))
+                                        onStatus = "success", offStatus = "danger", size = "small")
+                    )
                 )
             ),
             sliderInput("focus", NULL, width = "100%",
@@ -73,7 +96,8 @@ ui <- fluidPage(
                     tags$td(width = "100%", h4("Auto-exposure")),
                     tags$td(width = "0%",
                             switchInput("autoexposure", NULL, TRUE, inline = TRUE,
-                                        onStatus = "success", offStatus = "danger", size = "small"))
+                                        onStatus = "success", offStatus = "danger", size = "small")
+                    )
                 )
             ),
             sliderInput("exposure", NULL, width = "100%",
@@ -103,10 +127,11 @@ ui <- fluidPage(
                           ),
                           tags$td(width = "2%"),
                           tags$td(width = "49%",
-                                  actionButton("startstop", "Start", width = "100%")
+                                  disabled(actionButton("start", "Start", width = "100%"))
                           )
                       )
-                  )
+                  ),
+                  progressBar("pb", value = 0, display_pct = TRUE)
             ),
 
             tags$hr()
@@ -128,22 +153,28 @@ server <- function(input, output, session) {
         if (!is.null(input$camera)) {
             ix <- as.numeric(gsub("Camera ", "", input$camera))
             updateSwitchInput(session, "autoexposure",
-                              getProp(cams[[ix]], "AUTO_EXPOSURE") == 3)
-            updateSliderInput(session, "exposure", getProp(cams[[ix]], "EXPOSURE"))
+                              value = getProp(cams[[ix]], "AUTO_EXPOSURE") == 3)
+            updateSliderInput(session, "exposure",
+                              value = getProp(cams[[ix]], "EXPOSURE"))
             updateSwitchInput(session, "autofocus",
-                              getProp(cams[[ix]], "autofocus") == 1)
-            updateSliderInput(session, "focus", getProp(cams[[ix]], "FOCUS"))
+                              value = getProp(cams[[ix]], "AUTOFOCUS") == 1)
+            updateSliderInput(session, "focus",
+                              value = getProp(cams[[ix]], "FOCUS"))
         }
     })
 
     observe({
-        invalidateLater(1000 / 30, session)
+        invalidateLater(1000 / 15, session)
 
         if (!is.null(input$camera)) {
-            ix <- as.numeric(gsub("Camera ", "", input$camera))
-            display(readNext(cams[[ix]]), delay = 1,
-                    height = nrow(cams[[ix]]) * input$displaySize,
-                    width = ncol(cams[[ix]]) * input$displaySize)
+            if (input$display == TRUE) {
+                ix <- as.numeric(gsub("Camera ", "", input$camera))
+                display(zoom(readNext(cams[[ix]]), input$zoom), delay = 1,
+                        height = nrow(cams[[ix]]) * input$displaySize,
+                        width = ncol(cams[[ix]]) * input$displaySize)
+            } else {
+                destroyAllDisplays()
+            }
         }
     })
 
@@ -189,6 +220,77 @@ server <- function(input, output, session) {
             if (input$autoexposure == FALSE) {
                 ix <- as.numeric(gsub("Camera ", "", input$camera))
                 setProp(cams[[ix]], "EXPOSURE", input$exposure)
+            }
+        }
+    })
+
+    shinyDirChoose(
+        input,
+        "savedir",
+        roots = volumes(),
+        session = session
+    )
+
+    observe({
+        path <- parseDirPath(volumes(), input$savedir)
+
+        if (length(path) > 0) {
+            enable("start")
+        }
+    })
+
+    start <- reactiveVal()
+    end <- reactiveVal()
+
+    observe({
+        if (input$start > 0) {
+            isolate({ path <- parseDirPath(volumes(), input$savedir) })
+            for (i in 1:length(cams)) {
+                dir.create(paste0(path, "/Camera ", i))
+            }
+
+            updateSwitchInput(session, "display", value = FALSE)
+
+            start(Sys.time())
+            end(Sys.time() + input$duration)
+        }
+    })
+
+    observe({
+        if (!is.null(end())) {
+            if (Sys.time() <= end()) {
+                invalidateLater(input$interval * 1000, session)
+                disable("focus")
+                disable("exposure")
+                updateSwitchInput(session, "autofocus", disabled = TRUE)
+                updateSwitchInput(session, "autoexposure", disabled = TRUE)
+                disable("start")
+                disable("savedir")
+                disable("duration")
+                disable("interval")
+
+                isolate({ path <- parseDirPath(volumes(), input$savedir) })
+
+                for (i in 1:length(cams)) {
+                    write.Image(readNext(cams[[i]]),
+                                paste0(path, "/Camera ", i, "/",
+                                       format(Sys.time(), "%m-%d-%Y_%H-%M-%S.png")))
+                }
+
+                isolate({
+                    pc <- 100 * as.numeric(Sys.time() - start()) / as.numeric(end() - start())
+                    updateProgressBar(session, "pb", value = pc)
+                })
+            } else {
+                updateProgressBar(session, "pb", value = 100)
+                end(NULL)
+                enable("focus")
+                enable("exposure")
+                updateSwitchInput(session, "autofocus", disabled = FALSE)
+                updateSwitchInput(session, "autoexposure", disabled = FALSE)
+                enable("savedir")
+                enable("duration")
+                enable("interval")
             }
         }
     })
