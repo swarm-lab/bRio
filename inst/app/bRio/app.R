@@ -279,7 +279,8 @@ server <- function(input, output, session) {
                 }
 
                 isolate({
-                    pc <- 100 * as.numeric(Sys.time() - start()) / as.numeric(end() - start())
+                    pc <- 100 * as.numeric(Sys.time() - start(), units = "secs") /
+                        as.numeric(end() - start(), units = "secs")
                     updateProgressBar(session, "pb", value = pc)
                 })
             } else {
