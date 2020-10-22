@@ -87,7 +87,7 @@ ui <- fluidPage(
                 )
             ),
             sliderInput("focus", NULL, width = "100%",
-                        value = 0, min = 0, max = 255, step = 1)
+                        value = 0, min = 0, max = 255, step = 5)
             ),
 
             panel(heading = tags$table(
@@ -101,7 +101,7 @@ ui <- fluidPage(
                 )
             ),
             sliderInput("exposure", NULL, width = "100%",
-                        value = 250, min = 3, max = 2047, step = 1)
+                        value = 3, min = 3, max = 2047, step = 1)
             ),
 
             panel(heading = h4("Timelapse"),
@@ -179,7 +179,7 @@ server <- function(input, output, session) {
     })
 
     observe({
-        if (!is.null(input$camera)) {
+        if (!is.null(input$camera) & is.null(end())) {
             if (input$autofocus == TRUE) {
                 ix <- as.numeric(gsub("Camera ", "", input$camera))
                 setProp(cams[[ix]], "AUTOFOCUS", 1)
@@ -193,7 +193,7 @@ server <- function(input, output, session) {
     })
 
     observe({
-        if (!is.null(input$camera)) {
+        if (!is.null(input$camera) & is.null(end())) {
             if (input$autoexposure == TRUE) {
                 ix <- as.numeric(gsub("Camera ", "", input$camera))
                 setProp(cams[[ix]], "AUTO_EXPOSURE", 3)
@@ -251,8 +251,9 @@ server <- function(input, output, session) {
 
             updateSwitchInput(session, "display", value = FALSE)
 
-            start(Sys.time())
-            end(Sys.time() + input$duration)
+            st <- Sys.time()
+            start(st)
+            end(st + input$duration)
         }
     })
 
