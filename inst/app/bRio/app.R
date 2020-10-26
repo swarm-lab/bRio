@@ -163,15 +163,24 @@ server <- function(input, output, session) {
         }
     })
 
+    frames <- reactiveVal()
     observe({
-        invalidateLater(1000 / 15, session)
+        invalidateLater(1000 / 30, session)
 
         if (!is.null(input$camera)) {
+            isolate({
+                frames(lapply(cams, readNext))
+            })
+        }
+    })
+
+    observe({
+        if (!is.null(frames())) {
             if (input$display == TRUE) {
                 ix <- as.numeric(gsub("Camera ", "", input$camera))
-                display(zoom(readNext(cams[[ix]]), input$zoom), delay = 1,
-                        height = nrow(cams[[ix]]) * input$displaySize,
-                        width = ncol(cams[[ix]]) * input$displaySize)
+                display(zoom(frames()[[ix]], input$zoom), delay = 1,
+                        height = nrow(frames()[[ix]]) * input$displaySize,
+                        width = ncol(frames()[[ix]]) * input$displaySize)
             } else {
                 destroyAllDisplays()
             }
@@ -241,7 +250,7 @@ server <- function(input, output, session) {
 
     start <- reactiveVal()
     end <- reactiveVal()
-
+    counter <- reactiveVal()
     observe({
         if (input$start > 0) {
             isolate({ path <- parseDirPath(volumes(), input$savedir) })
@@ -251,16 +260,19 @@ server <- function(input, output, session) {
 
             updateSwitchInput(session, "display", value = FALSE)
 
-            st <- Sys.time()
-            start(st)
-            end(st + input$duration)
+            isolate({
+                st <- Sys.time()
+                start(st)
+                end(st + input$duration)
+                counter(0)
+            })
+
         }
     })
 
     observe({
-        if (!is.null(end())) {
+        if (!is.null(end()) & !is.null(frames())) {
             if (Sys.time() <= end()) {
-                invalidateLater(input$interval * 1000, session)
                 disable("focus")
                 disable("exposure")
                 updateSwitchInput(session, "autofocus", disabled = TRUE)
@@ -270,22 +282,30 @@ server <- function(input, output, session) {
                 disable("duration")
                 disable("interval")
 
-                isolate({ path <- parseDirPath(volumes(), input$savedir) })
+                elapsed <- as.numeric(Sys.time() - (start() + counter() * input$interval), units = "secs")
 
-                for (i in 1:length(cams)) {
-                    write.Image(readNext(cams[[i]]),
-                                paste0(path, "/Camera ", i, "/",
-                                       format(Sys.time(), "%m-%d-%Y_%H-%M-%S.png")))
+                if (elapsed > input$interval) {
+                    isolate({ path <- parseDirPath(volumes(), input$savedir) })
+
+                    for (i in 1:length(cams)) {
+                        write.Image(frames()[[i]],
+                                    paste0(path, "/Camera ", i, "/",
+                                           format(Sys.time(), "%m-%d-%Y_%H-%M-%S.png")))
+                    }
+
+                    isolate({
+                        pc <- 100 * as.numeric(Sys.time() - start(), units = "secs") /
+                            as.numeric(end() - start(), units = "secs")
+                        updateProgressBar(session, "pb", value = pc)
+                    })
+
+                    counter(counter() + 1)
                 }
-
-                isolate({
-                    pc <- 100 * as.numeric(Sys.time() - start(), units = "secs") /
-                        as.numeric(end() - start(), units = "secs")
-                    updateProgressBar(session, "pb", value = pc)
-                })
             } else {
                 updateProgressBar(session, "pb", value = 100)
+                start(NULL)
                 end(NULL)
+                counter(NULL)
                 enable("focus")
                 enable("exposure")
                 updateSwitchInput(session, "autofocus", disabled = FALSE)
