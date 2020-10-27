@@ -165,13 +165,13 @@ server <- function(input, output, session) {
 
     frames <- reactiveVal()
     observe({
-        invalidateLater(1000 / 30, session)
-
         if (!is.null(input$camera)) {
             isolate({
                 frames(lapply(cams, readNext))
             })
         }
+
+        invalidateLater(1000 / 30, session)
     })
 
     observe({
