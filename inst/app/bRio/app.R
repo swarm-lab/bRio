@@ -290,7 +290,7 @@ server <- function(input, output, session) {
                     for (i in 1:length(cams)) {
                         write.Image(frames()[[i]],
                                     paste0(path, "/Camera ", i, "/",
-                                           format(Sys.time(), "%m-%d-%Y_%H-%M-%S.png")))
+                                           format(Sys.time(), "%Y-%m-%d_%H-%M-%S.png")))
                     }
 
                     isolate({
