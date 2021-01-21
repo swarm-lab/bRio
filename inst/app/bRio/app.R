@@ -292,7 +292,7 @@ server <- function(input, output, session) {
                         # write.Image(frames()[[i]],
                         #             paste0(path, "/Camera ", i, "/",
                         #                    format(Sys.time(), "%Y-%m-%d_%H-%M-%S.png")))
-                        writePNG(frames()[[i]][nrow(frames()[[i]]):1,,c(3,2,1,4)] / 255,
+                        writePNG(frames()[[i]][nrow(frames()[[i]]):1,,] / 255,
                                  paste0(path, "/Camera ", i, "/",
                                         format(Sys.time(), "%Y-%m-%d_%H-%M-%S.png")))
                     }
