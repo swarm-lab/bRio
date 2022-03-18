@@ -314,12 +314,12 @@ server <- function(input, output, session) {
           isolate({ path <- parseDirPath(volumes(), input$savedir) })
 
           for (i in 1:length(cams)) {
-            # write.Image(frames()[[i]],
-            #             paste0(path, "/Camera ", i, "/",
-            #                    format(Sys.time(), "%Y-%m-%d_%H-%M-%S.png")))
-            writePNG(frames()[[i]][nrow(frames()[[i]]):1,,] / 255,
-                     paste0(path, "/Camera ", i, "/",
-                            format(Sys.time(), "%Y-%m-%d_%H-%M-%S.png")))
+            write.Image(frames()[[i]],
+                        paste0(path, "/Camera ", i, "/",
+                               format(Sys.time(), "%Y-%m-%d_%H-%M-%S.png")))
+            # writePNG(frames()[[i]][nrow(frames()[[i]]):1,,] / 255,
+            #          paste0(path, "/Camera ", i, "/",
+            #                 format(Sys.time(), "%Y-%m-%d_%H-%M-%S.png")))
           }
 
           isolate({
