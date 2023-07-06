@@ -1,3 +1,9 @@
+.vrtc-tab-panel-container {
+  width: 100%;
+  height: 100%;
+  float: left;
+}
+
 .form-group {
   margin-bottom: 0;
 }
