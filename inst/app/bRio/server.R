@@ -128,12 +128,12 @@ function(input, output, session) {
   shinyDirChoose(
     input,
     "savedir",
-    roots = volumes(),
+    roots = volumes,
     session = session
   )
 
   observeEvent(input$savedir, {
-    path <- parseDirPath(volumes(), input$savedir)
+    path <- parseDirPath(volumes, input$savedir)
 
     if (length(path) > 0) {
       enable("start")
@@ -153,7 +153,7 @@ function(input, output, session) {
     disable("savedir")
     disable("start")
 
-    path <- parseDirPath(volumes(), input$savedir)
+    path <- parseDirPath(volumes, input$savedir)
     vws <<- lapply(1:length(cams), function(i) {
       videoWriter(paste0(path, "/Camera_", i, "."), "FFV1", 30, 2160, 4096)
     })

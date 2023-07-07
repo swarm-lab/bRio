@@ -48,4 +48,4 @@ listCams <- function() {
 
 #### Globals #####
 cams <- listCams()
-volumes <- getVolumes()
+volumes <- c(Home = fs::path_home(), getVolumes()())
