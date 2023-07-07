@@ -9,6 +9,8 @@ function(input, output, session) {
   timeStamps <- list()
   toDisplay <- zeros(2160 / 3.2, 4096 / 3.2)
 
+
+  #### Init ####
   observe({
     if (length(cams) > 0) {
       updatePickerInput(session, "camera",
@@ -18,19 +20,23 @@ function(input, output, session) {
 
   observeEvent(input$camera, {
     ix <- as.numeric(gsub("Camera ", "", input$camera))
-    updateSwitchInput(session, "autoexposure",
-                      value = getProp(cams[[ix]], "AUTO_EXPOSURE") == 3)
-    updateSliderInput(session, "exposure",
-                      value = getProp(cams[[ix]], "EXPOSURE"))
-    updateSwitchInput(session, "autofocus",
-                      value = getProp(cams[[ix]], "AUTOFOCUS") == 1)
+    setProp(cams[[ix]], "AUTOFOCUS", 0)
     updateSliderInput(session, "focus",
                       value = getProp(cams[[ix]], "FOCUS"))
+    setProp(cams[[ix]], "AUTO_EXPOSURE", 1)
+    updateSliderInput(session, "exposure",
+                      value = getProp(cams[[ix]], "EXPOSURE"))
+    updateSliderInput(session, "gain",
+                      value = getProp(cams[[ix]], "GAIN"))
+    updateSliderInput(session, "brightness",
+                      value = getProp(cams[[ix]], "BRIGHTNESS"))
     frames <<- lapply(cams, readNext)
     timeStamps <<- lapply(cams, getProp, property = "POS_MSEC")
     grab(1)
   }, ignoreNULL = TRUE)
 
+
+  #### Display ####
   observeEvent(grabD(), {
     lapply(1:length(cams), function(i) readNext(cams[[i]], frames[[i]]))
     timeStamps <<- lapply(cams, getProp, property = "POS_MSEC")
@@ -83,67 +89,40 @@ function(input, output, session) {
   }, deleteFile = FALSE)
 
 
-
-  # observeEvent(input$autofocus, {
-  #   if (!is.null(input$camera)) {
-  #     if (input$autofocus == TRUE) {
-  #       ix <- as.numeric(gsub("Camera ", "", input$camera))
-  #       setProp(cams[[ix]], "AUTOFOCUS", 1)
-  #       disable("focus")
-  #     } else {
-  #       ix <- as.numeric(gsub("Camera ", "", input$camera))
-  #       setProp(cams[[ix]], "AUTOFOCUS", 0)
-  #       updateSliderInput(session, "focus", value = getProp(cams[[ix]], "FOCUS"))
-  #       enable("focus")
-  #     }
-  #   }
-  # })
-
+  #### Controls ####
   observeEvent(input$focus, {
     if (!is.null(input$camera)) {
-      # if (input$autofocus == FALSE) {
-        ix <- as.numeric(gsub("Camera ", "", input$camera))
-        setProp(cams[[ix]], "FOCUS", input$focus)
-      # }
+      ix <- as.numeric(gsub("Camera ", "", input$camera))
+      setProp(cams[[ix]], "FOCUS", input$focus)
     }
   })
 
-  # observeEvent(input$autoexposure, {
-  #   if (!is.null(input$camera)) {
-  #     if (input$autoexposure == TRUE) {
-  #       ix <- as.numeric(gsub("Camera ", "", input$camera))
-  #       setProp(cams[[ix]], "AUTO_EXPOSURE", 3)
-  #       disable("exposure")
-  #     } else {
-  #       ix <- as.numeric(gsub("Camera ", "", input$camera))
-  #       setProp(cams[[ix]], "AUTO_EXPOSURE", 1)
-  #       updateSliderInput(session, "exposure", value = getProp(cams[[ix]], "EXPOSURE"))
-  #       enable("exposure")
-  #     }
-  #   }
-  # })
-
   observeEvent(input$exposure, {
     if (!is.null(input$camera)) {
-      # if (input$autoexposure == FALSE) {
-        ix <- as.numeric(gsub("Camera ", "", input$camera))
-        setProp(cams[[ix]], "EXPOSURE", input$exposure)
-      # }
+      ix <- as.numeric(gsub("Camera ", "", input$camera))
+      setProp(cams[[ix]], "EXPOSURE", input$exposure)
+    }
+  })
+
+  observeEvent(input$gain, {
+    if (!is.null(input$camera)) {
+      ix <- as.numeric(gsub("Camera ", "", input$camera))
+      setProp(cams[[ix]], "GAIN", input$gain)
     }
   })
 
   observeEvent(input$brightness, {
     if (!is.null(input$camera)) {
-        ix <- as.numeric(gsub("Camera ", "", input$camera))
-        setProp(cams[[ix]], "BRIGHTNESS", input$brightness)
+      ix <- as.numeric(gsub("Camera ", "", input$camera))
+      setProp(cams[[ix]], "BRIGHTNESS", input$brightness)
     }
   })
 
 
+  #### Recording ####
 
 
-
-
+  #### Cleanup ####
   session$onSessionEnded(function() {
     destroyAllDisplays()
     lapply(cams, function(x) release(x))
