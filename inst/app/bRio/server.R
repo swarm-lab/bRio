@@ -84,51 +84,58 @@ function(input, output, session) {
 
 
 
-  observeEvent(input$autofocus, {
-    if (!is.null(input$camera)) {
-      if (input$autofocus == TRUE) {
-        ix <- as.numeric(gsub("Camera ", "", input$camera))
-        setProp(cams[[ix]], "AUTOFOCUS", 1)
-        disable("focus")
-      } else {
-        ix <- as.numeric(gsub("Camera ", "", input$camera))
-        setProp(cams[[ix]], "AUTOFOCUS", 0)
-        updateSliderInput(session, "focus", value = getProp(cams[[ix]], "FOCUS"))
-        enable("focus")
-      }
-    }
-  })
+  # observeEvent(input$autofocus, {
+  #   if (!is.null(input$camera)) {
+  #     if (input$autofocus == TRUE) {
+  #       ix <- as.numeric(gsub("Camera ", "", input$camera))
+  #       setProp(cams[[ix]], "AUTOFOCUS", 1)
+  #       disable("focus")
+  #     } else {
+  #       ix <- as.numeric(gsub("Camera ", "", input$camera))
+  #       setProp(cams[[ix]], "AUTOFOCUS", 0)
+  #       updateSliderInput(session, "focus", value = getProp(cams[[ix]], "FOCUS"))
+  #       enable("focus")
+  #     }
+  #   }
+  # })
 
   observeEvent(input$focus, {
     if (!is.null(input$camera)) {
-      if (input$autofocus == FALSE) {
+      # if (input$autofocus == FALSE) {
         ix <- as.numeric(gsub("Camera ", "", input$camera))
         setProp(cams[[ix]], "FOCUS", input$focus)
-      }
+      # }
     }
   })
 
-  observeEvent(input$autoexposure, {
-    if (!is.null(input$camera)) {
-      if (input$autoexposure == TRUE) {
-        ix <- as.numeric(gsub("Camera ", "", input$camera))
-        setProp(cams[[ix]], "AUTO_EXPOSURE", 3)
-        disable("exposure")
-      } else {
-        ix <- as.numeric(gsub("Camera ", "", input$camera))
-        setProp(cams[[ix]], "AUTO_EXPOSURE", 1)
-        updateSliderInput(session, "exposure", value = getProp(cams[[ix]], "EXPOSURE"))
-        enable("exposure")
-      }
-    }
-  })
+  # observeEvent(input$autoexposure, {
+  #   if (!is.null(input$camera)) {
+  #     if (input$autoexposure == TRUE) {
+  #       ix <- as.numeric(gsub("Camera ", "", input$camera))
+  #       setProp(cams[[ix]], "AUTO_EXPOSURE", 3)
+  #       disable("exposure")
+  #     } else {
+  #       ix <- as.numeric(gsub("Camera ", "", input$camera))
+  #       setProp(cams[[ix]], "AUTO_EXPOSURE", 1)
+  #       updateSliderInput(session, "exposure", value = getProp(cams[[ix]], "EXPOSURE"))
+  #       enable("exposure")
+  #     }
+  #   }
+  # })
 
   observeEvent(input$exposure, {
     if (!is.null(input$camera)) {
-      if (input$autoexposure == FALSE) {
+      # if (input$autoexposure == FALSE) {
         ix <- as.numeric(gsub("Camera ", "", input$camera))
         setProp(cams[[ix]], "EXPOSURE", input$exposure)
-      }
+      # }
+    }
+  })
+
+  observeEvent(input$brightness, {
+    if (!is.null(input$camera)) {
+        ix <- as.numeric(gsub("Camera ", "", input$camera))
+        setProp(cams[[ix]], "BRIGHTNESS", input$brightness)
     }
   })
 

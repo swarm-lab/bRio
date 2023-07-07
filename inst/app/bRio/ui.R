@@ -37,32 +37,47 @@ fluidPage(
                     value = 1, min = 1, max = 5, step = 0.1)
       ),
 
-      panel(heading = tags$table(
-        width = "100%",
-        tags$tr(
-          tags$td(width = "100%", h4("Autofocus")),
-          tags$td(width = "0%",
-                  switchInput("autofocus", NULL, TRUE, inline = TRUE,
-                              onStatus = "success", offStatus = "danger", size = "small")
-          )
-        )
-      ),
+      # panel(heading = tags$table(
+      #   width = "100%",
+      #   tags$tr(
+      #     tags$td(width = "100%", h4("Autofocus")),
+      #     tags$td(width = "0%",
+      #             switchInput("autofocus", NULL, TRUE, inline = TRUE,
+      #                         onStatus = "success", offStatus = "danger", size = "small")
+      #     )
+      #   )
+      # ),
+      # sliderInput("focus", NULL, width = "100%",
+      #             value = 0, min = 0, max = 255, step = 5)
+      # ),
+
+      panel(heading = h4("Focus"),
       sliderInput("focus", NULL, width = "100%",
                   value = 0, min = 0, max = 255, step = 5)
       ),
 
-      panel(heading = tags$table(
-        width = "100%",
-        tags$tr(
-          tags$td(width = "100%", h4("Auto-exposure")),
-          tags$td(width = "0%",
-                  switchInput("autoexposure", NULL, TRUE, inline = TRUE,
-                              onStatus = "success", offStatus = "danger", size = "small")
-          )
-        )
-      ),
+      # panel(heading = tags$table(
+      #   width = "100%",
+      #   tags$tr(
+      #     tags$td(width = "100%", h4("Auto-exposure")),
+      #     tags$td(width = "0%",
+      #             switchInput("autoexposure", NULL, TRUE, inline = TRUE,
+      #                         onStatus = "success", offStatus = "danger", size = "small")
+      #     )
+      #   )
+      # ),
+      # sliderInput("exposure", NULL, width = "100%",
+      #             value = 3, min = 3, max = 2047, step = 1)
+      # ),
+
+      panel(heading = h4("Exposure"),
       sliderInput("exposure", NULL, width = "100%",
-                  value = 3, min = 3, max = 2047, step = 1)
+                  value = 1024, min = 3, max = 2047, step = 1)
+      ),
+
+      panel(heading = h4("Brightness"),
+            sliderInput("brightness", NULL, width = "100%",
+                        value = 128, min = 3, max = 255, step = 1)
       ),
 
       panel(heading = h4("Timelapse"),
