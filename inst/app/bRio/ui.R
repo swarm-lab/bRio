@@ -25,12 +25,7 @@ fluidPage(
             tags$td(width = "95%", h4("Select a camera")),
             tags$td(width = "0%",
                     pickerInput("camera", NULL, width = "100%",
-                                choices = NULL)),
-            tags$td(width = "5%"),
-            tags$td(width = "0%",
-                    switchInput("display", NULL, TRUE, inline = TRUE,
-                                onStatus = "success", offStatus = "danger", size = "small")
-            )
+                                choices = NULL))
           )
         ),
         sliderInput("zoom", "Zoom", width = "100%",
@@ -52,7 +47,7 @@ fluidPage(
               style = "margin-bottom: 10px;",
               tags$tr(
                 tags$td(width = "49%",
-                        numericInput("fps", "Interval (sec)",
+                        numericInput("interval", "Interval (sec)",
                                      1, step = 0.02, min = 0, width = "100%")
                 ),
                 tags$td(width = "2%"),

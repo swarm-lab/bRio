@@ -1,13 +1,19 @@
 #### Server ####
 function(input, output, session) {
-  grab <- reactiveVal()
-  grabD <- debounce(grab, 20)
+  grabDisplay <- reactiveVal()
+  grabDisplayD <- debounce(grabDisplay, 20)
   refreshDisplay <- reactiveVal(0)
   printDisplay <- reactiveVal()
   tmpDir <- tempdir()
-  frames <- list()
-  timeStamps <- list()
   toDisplay <- zeros(2160 / 3.2, 4096 / 3.2)
+  frames <- list()
+  vws <- list()
+  record <- reactiveVal()
+  grabRecord <- reactiveVal()
+  grabRecordD <- debounce(grabRecord, 1)
+  counter <- 0
+  steps <- 0
+  end <- 0
 
 
   #### Init ####
@@ -32,16 +38,15 @@ function(input, output, session) {
                       value = getProp(cams[[ix]], "BRIGHTNESS"))
     frames <<- lapply(cams, readNext)
     timeStamps <<- lapply(cams, getProp, property = "POS_MSEC")
-    grab(1)
+    grabDisplay(1)
   }, ignoreNULL = TRUE)
 
 
   #### Display ####
-  observeEvent(grabD(), {
+  observeEvent(grabDisplayD(), {
     lapply(1:length(cams), function(i) readNext(cams[[i]], frames[[i]]))
-    timeStamps <<- lapply(cams, getProp, property = "POS_MSEC")
     refreshDisplay(refreshDisplay() + 1)
-    grab(grab() + 1)
+    grabDisplay(grabDisplay() + 1)
   }, ignoreNULL = TRUE)
 
   observeEvent(refreshDisplay(), {
@@ -120,6 +125,80 @@ function(input, output, session) {
 
 
   #### Recording ####
+  shinyDirChoose(
+    input,
+    "savedir",
+    roots = volumes(),
+    session = session
+  )
+
+  observeEvent(input$savedir, {
+    path <- parseDirPath(volumes(), input$savedir)
+
+    if (length(path) > 0) {
+      enable("start")
+    }
+  })
+
+  observeEvent(input$start, {
+    disable("displayImg")
+    disable("camera")
+    disable("zoom")
+    disable("focus")
+    disable("exposure")
+    disable("gain")
+    disable("brightness")
+    disable("interval")
+    disable("duration")
+    disable("savedir")
+    disable("start")
+
+    path <- parseDirPath(volumes(), input$savedir)
+    vws <<- lapply(1:length(cams), function(i) {
+      videoWriter(paste0(path, "/Camera_", i, "."), "FFV1", 30, 2160, 4096)
+    })
+
+    counter <<- 1
+    lapply(1:length(cams), function(i) readNext(cams[[i]], frames[[i]]))
+    steps <- (as.numeric(Sys.time()) * 1000) +
+      ((1:round(input$duration / input$interval)) * 1000)
+    end <<- length(steps)
+    grabRecord(1)
+  }, ignoreInit = TRUE)
+
+  observeEvent(grabRecordD(), {
+    lapply(1:length(cams), function(i) readNext(cams[[i]], frames[[i]]))
+    now <- as.numeric(Sys.time()) * 1000
+
+    if (now >= steps[counter]) {
+      ts <- getTextSize(now, thickness = 2)
+      lapply(1:length(cams), function(i) {
+        drawRectangle(frames[[i]], 1, 1, ts[2] + 20, ts[1] + 20, color = "white", thickness = -1)
+        drawText(frames[[i]], now, 10, 10, color = "black", thickness = 2)
+        writeFrame(vws[[i]], frames[[i]])
+      })
+
+      counter <<- counter + 1
+    }
+
+    if (counter > end) {
+      grabRecord(NULL)
+      enable("displayImg")
+      enable("camera")
+      enable("zoom")
+      enable("focus")
+      enable("exposure")
+      enable("gain")
+      enable("brightness")
+      enable("interval")
+      enable("duration")
+      enable("savedir")
+      enable("start")
+      lapply(vws, release)
+    } else {
+      grabRecord(grabRecord() + 1)
+    }
+  }, ignoreNULL = TRUE)
 
 
   #### Cleanup ####
