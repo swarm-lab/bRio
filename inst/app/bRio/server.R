@@ -61,8 +61,8 @@ function(input, output, session) {
     ix <- as.numeric(gsub("Camera ", "", input$camera))
     iw <- 4096 / 2
     ih <- 2160 / 2
-    ww <- session$clientData[["output_displayImg_width"]] - 15
-    wh <- (session$clientData[["output_displayImg_width"]] - 15) * ih / iw
+    ww <- session$clientData[["output_displayImg_width"]]
+    wh <- session$clientData[["output_displayImg_width"]] * ih / iw
 
     list(src = paste0(tmpDir, "/display.jpg"),
          width = ww,
