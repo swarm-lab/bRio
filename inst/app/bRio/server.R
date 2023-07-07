@@ -7,6 +7,7 @@ function(input, output, session) {
   tmpDir <- tempdir()
   frames <- list()
   timeStamps <- list()
+  toDisplay <- zeros(2160 / 2, 4096 / 2)
 
   observe({
     if (length(cams) > 0) {
@@ -42,9 +43,10 @@ function(input, output, session) {
       ix <- as.numeric(gsub("Camera ", "", input$camera))
 
       if (isImage(frames[[ix]])) {
-        suppressMessages(write.Image(frames[[ix]], paste0(tmpDir, "/display.jpg"), TRUE))
+        resize(frames[[ix]], 2160 / 2, 4096 / 2, target = toDisplay)
+        suppressMessages(write.Image(toDisplay, paste0(tmpDir, "/display.jpg"), TRUE))
       } else {
-        suppressMessages(write.Image(zeros(1080, 1920, 3), paste0(tmpDir, "/display.jpg"), TRUE))
+        suppressMessages(write.Image(zeros(2160 / 2, 4096 / 2, 3), paste0(tmpDir, "/display.jpg"), TRUE))
       }
 
       if (is.null(printDisplay())) {
@@ -57,16 +59,8 @@ function(input, output, session) {
 
   output$displayImg <- renderImage({
     ix <- as.numeric(gsub("Camera ", "", input$camera))
-    iw <- 1920
-    ih <- 1080
-
-    if (length(ix) > 0) {
-      if (isImage(frames[[ix]])) {
-        iw <- ncol(frames[[ix]])
-        ih <- nrow(frames[[ix]])
-      }
-    }
-
+    iw <- 4096 / 2
+    ih <- 2160 / 2
     ww <- session$clientData[["output_displayImg_width"]] - 15
     wh <- (session$clientData[["output_displayImg_width"]] - 15) * ih / iw
 
