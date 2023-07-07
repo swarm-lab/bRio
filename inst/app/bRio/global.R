@@ -45,18 +45,6 @@ listCams <- function() {
   cams
 }
 
-zoom <- function(img, f) {
-  if (f < 1)
-    stop("Incompatible zoom factor")
-
-  w <- ncol(img) / f
-  h <- nrow(img) / f
-  x <- 1 + (ncol(img) - w) / 2
-  y <- 1 + (nrow(img) - h) / 2
-
-  resize(subImage(img, x, y, w, h), nrow(img), ncol(img), interpolation = "cubic")
-}
-
 
 #### Globals #####
 cams <- listCams()
