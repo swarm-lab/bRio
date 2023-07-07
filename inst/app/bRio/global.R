@@ -19,7 +19,11 @@ listCams <- function() {
   }
 
   cams <- lapply(dev_id, function(i) {
-    st <- tryCatch(stream(i, api = "V4L2"), error = function(e) FALSE)
+    if (Sys.info()["sysname"] == "Linux") {
+      st <- tryCatch(stream(i, api = "V4L2"), error = function(e) FALSE)
+    } else if (Sys.info()["sysname"] == "Darwin") {
+      st <- tryCatch(stream(i, api = "AVFOUNDATION"), error = function(e) FALSE)
+    }
 
     if (isStream(st)) {
       setProp(st, "FOURCC", fourcc("MJPG"))
