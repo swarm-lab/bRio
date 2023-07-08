@@ -3,10 +3,10 @@ function(input, output, session) {
   display <- FALSE
   displayTimer <- reactiveTimer(40, session)
 
-  grabDisplay <- reactiveVal()
-  grabDisplayD <- debounce(grabDisplay, 20)
+  # grabDisplay <- reactiveVal()
+  # grabDisplayD <- debounce(grabDisplay, 20)
   refreshDisplay <- reactiveVal(0)
-  printDisplay <- reactiveVal()
+  # printDisplay <- reactiveVal()
   tmpDir <- tempdir()
   frame <- zeros(2160, 4096)
   toDisplay <- zeros(2160 / 3.2, 4096 / 3.2)
@@ -30,16 +30,16 @@ function(input, output, session) {
 
   observeEvent(input$camera, {
     ix <- as.numeric(gsub("Camera ", "", input$camera))
-    setProp(cams[[ix]], "AUTOFOCUS", 0)
+    setProp(cams[[ix]]$stream, "AUTOFOCUS", 0)
     updateSliderInput(session, "focus",
-                      value = getProp(cams[[ix]], "FOCUS"))
-    setProp(cams[[ix]], "AUTO_EXPOSURE", 1)
+                      value = getProp(cams[[ix]]$stream, "FOCUS"))
+    setProp(cams[[ix]]$stream, "AUTO_EXPOSURE", 1)
     updateSliderInput(session, "exposure",
-                      value = getProp(cams[[ix]], "EXPOSURE"))
+                      value = getProp(cams[[ix]]$stream, "EXPOSURE"))
     updateSliderInput(session, "gain",
-                      value = getProp(cams[[ix]], "GAIN"))
+                      value = getProp(cams[[ix]]$stream, "GAIN"))
     updateSliderInput(session, "brightness",
-                      value = getProp(cams[[ix]], "BRIGHTNESS"))
+                      value = getProp(cams[[ix]]$stream, "BRIGHTNESS"))
     display <<- TRUE
   }, ignoreNULL = TRUE)
 
@@ -117,28 +117,28 @@ function(input, output, session) {
   observeEvent(input$focus, {
     if (!is.null(input$camera)) {
       ix <- as.numeric(gsub("Camera ", "", input$camera))
-      setProp(cams[[ix]], "FOCUS", input$focus)
+      setProp(cams[[ix]]$stream, "FOCUS", input$focus)
     }
   })
 
   observeEvent(input$exposure, {
     if (!is.null(input$camera)) {
       ix <- as.numeric(gsub("Camera ", "", input$camera))
-      setProp(cams[[ix]], "EXPOSURE", input$exposure)
+      setProp(cams[[ix]]$stream, "EXPOSURE", input$exposure)
     }
   })
 
   observeEvent(input$gain, {
     if (!is.null(input$camera)) {
       ix <- as.numeric(gsub("Camera ", "", input$camera))
-      setProp(cams[[ix]], "GAIN", input$gain)
+      setProp(cams[[ix]]$stream, "GAIN", input$gain)
     }
   })
 
   observeEvent(input$brightness, {
     if (!is.null(input$camera)) {
       ix <- as.numeric(gsub("Camera ", "", input$camera))
-      setProp(cams[[ix]], "BRIGHTNESS", input$brightness)
+      setProp(cams[[ix]]$stream, "BRIGHTNESS", input$brightness)
     }
   })
 
@@ -229,6 +229,9 @@ function(input, output, session) {
     destroyAllDisplays()
     if (length(vws) > 1)
       lapply(vws, release)
-    lapply(cams, release)
+    lapply(cams, function(cam) {
+      release(cam$queue)
+      release(cam$stream)
+    })
   })
 }
