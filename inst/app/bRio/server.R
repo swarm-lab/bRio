@@ -155,14 +155,16 @@ function(input, output, session) {
 
     path <- parseDirPath(volumes, input$savedir)
     vws <<- lapply(1:length(cams), function(i) {
-      videoWriter(paste0(path, "/Camera_", i, "."), "FFV1", 30, 2160, 4096)
+      videoWriter(paste0(path, "/Camera_", i, ".mp4"), "avc1", 30, 2160, 4096)
     })
 
     counter <<- 1
+    updateProgressBar(session, "pb", value = 0)
     lapply(1:length(cams), function(i) readNext(cams[[i]], frames[[i]]))
-    steps <- (as.numeric(Sys.time()) * 1000) +
-      ((1:round(input$duration / input$interval)) * 1000)
+    steps <<- (as.numeric(Sys.time()) * 1000) +
+      ((1:round(input$duration / input$interval)) * (1000 *  input$interval))
     end <<- length(steps)
+    grabDisplay(NULL)
     grabRecord(1)
   }, ignoreInit = TRUE)
 
@@ -171,17 +173,20 @@ function(input, output, session) {
     now <- as.numeric(Sys.time()) * 1000
 
     if (now >= steps[counter]) {
-      ts <- getTextSize(now, thickness = 2)
+      ts <- getTextSize(as.character(now), thickness = 2)
       lapply(1:length(cams), function(i) {
         drawRectangle(frames[[i]], 1, 1, ts[2] + 20, ts[1] + 20, color = "white", thickness = -1)
-        drawText(frames[[i]], now, 10, 10, color = "black", thickness = 2)
+        drawText(frames[[i]], as.character(now), 10, 10, color = "black", thickness = 2)
         writeFrame(vws[[i]], frames[[i]])
       })
 
       counter <<- counter + 1
+      updateProgressBar(session, "pb", value = 100 * (counter / end))
     }
 
     if (counter > end) {
+      updateProgressBar(session, "pb", value = 100)
+      grabDisplay(1)
       grabRecord(NULL)
       enable("displayImg")
       enable("camera")
@@ -193,8 +198,7 @@ function(input, output, session) {
       enable("interval")
       enable("duration")
       enable("savedir")
-      enable("start")
-      lapply(vws, release)
+      suppressWarnings(lapply(vws, release))
     } else {
       grabRecord(grabRecord() + 1)
     }
@@ -204,6 +208,8 @@ function(input, output, session) {
   #### Cleanup ####
   session$onSessionEnded(function() {
     destroyAllDisplays()
-    lapply(cams, function(x) release(x))
+    if (length(vws) > 1)
+      lapply(vws, release)
+    lapply(cams, release)
   })
 }
