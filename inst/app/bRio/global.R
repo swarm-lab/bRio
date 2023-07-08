@@ -31,7 +31,7 @@ listCams <- function() {
       setProp(st, "FRAME_HEIGHT", 2160)
 
       if (getProp(st, "FRAME_WIDTH") == 4096 & getProp(st, "FRAME_HEIGHT") == 2160) {
-        list(stream = st, queue = queue(st, 2, 100, "replace"))
+        st
       } else {
         release(st)
         NULL
@@ -42,6 +42,8 @@ listCams <- function() {
   })
 
   cams <- cams[lengths(cams) != 0]
+  # st <- stream(0, api = "AVFOUNDATION")
+  # cams <- list(st)
   cams
 }
 
