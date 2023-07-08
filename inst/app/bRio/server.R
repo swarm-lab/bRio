@@ -1,10 +1,14 @@
 #### Server ####
 function(input, output, session) {
+  display <- FALSE
+  displayTimer <- reactiveTimer(40, session)
+
   grabDisplay <- reactiveVal()
   grabDisplayD <- debounce(grabDisplay, 20)
   refreshDisplay <- reactiveVal(0)
   printDisplay <- reactiveVal()
   tmpDir <- tempdir()
+  frame <- zeros(2160, 4096)
   toDisplay <- zeros(2160 / 3.2, 4096 / 3.2)
   frames <- list()
   vws <- list()
@@ -36,52 +40,67 @@ function(input, output, session) {
                       value = getProp(cams[[ix]], "GAIN"))
     updateSliderInput(session, "brightness",
                       value = getProp(cams[[ix]], "BRIGHTNESS"))
-    frames <<- lapply(cams, readNext)
-    timeStamps <<- lapply(cams, getProp, property = "POS_MSEC")
-    grabDisplay(1)
+    display <<- TRUE
   }, ignoreNULL = TRUE)
 
 
   #### Display ####
-  observeEvent(grabDisplayD(), {
-    lapply(1:length(cams), function(i) readNext(cams[[i]], frames[[i]]))
-    refreshDisplay(refreshDisplay() + 1)
-    grabDisplay(grabDisplay() + 1)
-  }, ignoreNULL = TRUE)
-
-  observeEvent(refreshDisplay(), {
-    if (refreshDisplay() > 0) {
+  observeEvent(displayTimer(), {
+    if (display == TRUE) {
       ix <- as.numeric(gsub("Camera ", "", input$camera))
+      readNext(cams[[ix]]$queue, frame)
 
-      if (isImage(frames[[ix]])) {
-        if (input$zoom > 1) {
-          w <- 4096 / input$zoom
-          h <- 2160 / input$zoom
-          x <- 1 + (4096 - w) / 2
-          y <- 1 + (2160 - h) / 2
-          resize(subImage(frames[[ix]], x, y, w, h), 2160 / 3.2, 4096 / 3.2, interpolation = "cubic", target = toDisplay)
-        } else {
-          resize(frames[[ix]], 2160 / 3.2, 4096 / 3.2, interpolation = "cubic", target = toDisplay)
-        }
-
-        clock <- as.character(Sys.time(), 2L)
-        drawRectangle(toDisplay, 1, 1, 442, 42, color = "white", thickness = -1)
-        drawText(toDisplay, clock, 10, 10, color = "black", thickness = 2)
-        suppressMessages(write.Image(toDisplay, paste0(tmpDir, "/display.jpg"), TRUE))
+      if (input$zoom > 1) {
+        w <- 4096 / input$zoom
+        h <- 2160 / input$zoom
+        x <- 1 + (4096 - w) / 2
+        y <- 1 + (2160 - h) / 2
+        resize(subImage(frame, x, y, w, h), 2160 / 3.2, 4096 / 3.2, interpolation = "cubic", target = toDisplay)
       } else {
-        suppressMessages(write.Image(zeros(2160 / 3.2, 4096 / 3.2, 3), paste0(tmpDir, "/display.jpg"), TRUE))
+        resize(frame, 2160 / 3.2, 4096 / 3.2, interpolation = "cubic", target = toDisplay)
       }
 
-      if (is.null(printDisplay())) {
-        printDisplay(1)
-      } else {
-        printDisplay(printDisplay() + 1)
-      }
+      clock <- as.character(Sys.time(), 2L)
+      drawRectangle(toDisplay, 1, 1, 442, 42, color = "white", thickness = -1)
+      drawText(toDisplay, clock, 10, 10, color = "black", thickness = 2)
+      suppressMessages(write.Image(toDisplay, paste0(tmpDir, "/display.jpg"), TRUE))
+      refreshDisplay(refreshDisplay() + 1)
     }
-  }, ignoreNULL = TRUE)
+  })
+
+  # observeEvent(refreshDisplay(), {
+  #   if (refreshDisplay() > 0) {
+  #     ix <- as.numeric(gsub("Camera ", "", input$camera))
+  #
+  #     if (isImage(frames[[ix]])) {
+  #       if (input$zoom > 1) {
+  #         w <- 4096 / input$zoom
+  #         h <- 2160 / input$zoom
+  #         x <- 1 + (4096 - w) / 2
+  #         y <- 1 + (2160 - h) / 2
+  #         resize(subImage(frames[[ix]], x, y, w, h), 2160 / 3.2, 4096 / 3.2, interpolation = "cubic", target = toDisplay)
+  #       } else {
+  #         resize(frames[[ix]], 2160 / 3.2, 4096 / 3.2, interpolation = "cubic", target = toDisplay)
+  #       }
+  #
+  #       clock <- as.character(Sys.time(), 2L)
+  #       drawRectangle(toDisplay, 1, 1, 442, 42, color = "white", thickness = -1)
+  #       drawText(toDisplay, clock, 10, 10, color = "black", thickness = 2)
+  #       suppressMessages(write.Image(toDisplay, paste0(tmpDir, "/display.jpg"), TRUE))
+  #     } else {
+  #       suppressMessages(write.Image(zeros(2160 / 3.2, 4096 / 3.2, 3), paste0(tmpDir, "/display.jpg"), TRUE))
+  #     }
+  #
+  #     if (is.null(printDisplay())) {
+  #       printDisplay(1)
+  #     } else {
+  #       printDisplay(printDisplay() + 1)
+  #     }
+  #   }
+  # }, ignoreNULL = TRUE)
 
   output$displayImg <- renderImage({
-    printDisplay()
+    refreshDisplay()
     ix <- as.numeric(gsub("Camera ", "", input$camera))
     iw <- 4096 / 3.2
     ih <- 2160 / 3.2

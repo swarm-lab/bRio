@@ -31,7 +31,7 @@ listCams <- function() {
       setProp(st, "FRAME_HEIGHT", 2160)
 
       if (getProp(st, "FRAME_WIDTH") == 4096 & getProp(st, "FRAME_HEIGHT") == 2160) {
-        list(st, queue(st, 1, 100, "replace"))
+        list(stream = st, queue = queue(st, 1, 100, "replace"))
       } else {
         release(st)
         NULL
