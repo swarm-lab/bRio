@@ -48,6 +48,6 @@ listCams <- function(width = 1920, height = 1080) {
 
 
 #### Globals #####
-frameSize <- c(1920, 1080) # c(2160, 4096)
+frameSize <- c(1920, 1080) # c(4096, 2160)
 cams <- listCams(frameSize[1], frameSize[2])
 volumes <- c(Home = fs::path_home(), getVolumes()())

@@ -230,9 +230,13 @@ function(input, output, session) {
 
   #### Cleanup ####
   session$onSessionEnded(function() {
-    destroyAllDisplays()
-    if (length(vws) > 1)
-      suppressWarnings(lapply(vws, release))
+    if (length(vws) > 1) {
+      suppressWarnings(lapply(vws, function(vw) {
+        if (isVideoWriter(vw)) {
+          release(vw)
+        }
+      }))
+    }
     suppressWarnings(lapply(cams, release))
   })
 }
