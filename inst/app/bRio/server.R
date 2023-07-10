@@ -1,16 +1,17 @@
 #### Server ####
 function(input, output, session) {
+  origTime <- as.numeric(Sys.time()) * 1000
   display <- FALSE
-  displayTimer <- reactiveTimer(160, session)
+  displayInterval <- 40
   refreshDisplay <- reactiveVal(0)
   tmpDir <- tempdir()
-  frameSize <- c(1080, 1920) # c(2160, 4096) #
-  frame <- zeros(frameSize[1], frameSize[2])
-  toDisplay <- zeros(frameSize[1] / 3.2, frameSize[2] / 3.2)
+  frame <- zeros(frameSize[2], frameSize[1])
+  toDisplay <- zeros(frameSize[2], frameSize[1])
   frames <- list()
   vws <- list()
   record <- FALSE
-  recordTimer <- reactiveTimer(1, session)
+  recordInterval <- displayInterval
+  endRecordTime <- origTime
   counter <- 0
   steps <- 0
   end <- 0
@@ -41,36 +42,37 @@ function(input, output, session) {
 
 
   #### Display ####
-  observeEvent(displayTimer(), {
+  observe({
     if (display == TRUE) {
-      ix <- as.numeric(gsub("Camera ", "", input$camera))
+      ix <- as.numeric(gsub("Camera ", "", isolate(input$camera)))
       readNext(cams[[ix]], frame)
 
       if (input$zoom > 1) {
-        w <- frameSize[2] / input$zoom
-        h <- frameSize[1] / input$zoom
-        x <- 1 + (frameSize[2] - w) / 2
-        y <- 1 + (frameSize[1] - h) / 2
-        resize(subImage(frame, x, y, w, h), frameSize[1] / 3.2, frameSize[2] / 3.2,
+        w <- frameSize[1] / isolate(input$zoom)
+        h <- frameSize[2] / isolate(input$zoom)
+        x <- 1 + (frameSize[1] - w) / 2
+        y <- 1 + (frameSize[2] - h) / 2
+        resize(subImage(frame, x, y, w, h), frameSize[2], frameSize[1],
                interpolation = "cubic", target = toDisplay)
       } else {
-        resize(frame, frameSize[1] / 3.2, frameSize[2] / 3.2,
-               interpolation = "cubic", target = toDisplay)
+        cloneImage(frame, toDisplay)
       }
 
       clock <- as.character(Sys.time(), 2L)
       drawRectangle(toDisplay, 1, 1, 442, 42, color = "white", thickness = -1)
       drawText(toDisplay, clock, 10, 10, color = "black", thickness = 2)
       suppressMessages(write.Image(toDisplay, paste0(tmpDir, "/display.jpg"), TRUE))
-      refreshDisplay(refreshDisplay() + 1)
+      isolate(refreshDisplay(refreshDisplay() + 1))
     }
+
+    invalidateLater(displayInterval - ((as.numeric(Sys.time()) * 1000 - origTime) %% displayInterval))
   })
 
   output$displayImg <- renderImage({
     refreshDisplay()
     ix <- as.numeric(gsub("Camera ", "", input$camera))
-    iw <- frameSize[2] / 3.2
-    ih <- frameSize[1] / 3.2
+    iw <- frameSize[1]
+    ih <- frameSize[2]
     ww <- session$clientData[["output_displayImg_width"]]
     wh <- session$clientData[["output_displayImg_width"]] * ih / iw
 
@@ -127,6 +129,8 @@ function(input, output, session) {
   })
 
   observeEvent(input$start, {
+    display <<- FALSE
+    record <<- TRUE
     disable("displayImg")
     disable("camera")
     disable("zoom")
@@ -141,37 +145,67 @@ function(input, output, session) {
 
     path <- parseDirPath(volumes, input$savedir)
     vws <<- lapply(1:length(cams), function(i) {
-      videoWriter(paste0(path, "/Camera_", i, ".mp4"), "avc1", 30, frameSize[1], frameSize[2])
+      videoWriter(paste0(path, "/Camera_", i, ".mp4"), "avc1", 25, frameSize[2], frameSize[1])
     })
 
-    counter <<- 1
     updateProgressBar(session, "pb", value = 0)
     frames <<- lapply(1:length(cams), function(i) readNext(cams[[i]]))
-    steps <<- (as.numeric(Sys.time()) * 1000) +
-      ((1:round(input$duration / input$interval)) * (1000 *  input$interval))
-    end <<- length(steps)
-    display <<- FALSE
-    record <<- TRUE
+    origTime <<- as.numeric(Sys.time()) * 1000
+    endRecordTime <<- origTime + input$duration * 1000
+    recordInterval <<- input$interval * 1000
   }, ignoreInit = TRUE)
 
-  observeEvent(recordTimer(), {
+  # observeEvent(recordTimer(), {
+  #   if (record == TRUE) {
+  #     lapply(1:length(cams), function(i) readNext(cams[[i]], frames[[i]]))
+  #     now <- as.numeric(Sys.time()) * 1000
+  #
+  #     if (now >= steps[counter]) {
+  #       ts <- getTextSize(as.character(now), thickness = 2)
+  #       lapply(1:length(cams), function(i) {
+  #         drawRectangle(frames[[i]], 1, 1, ts[2] + 20, ts[1] + 20, color = "white", thickness = -1)
+  #         drawText(frames[[i]], as.character(now), 10, 10, color = "black", thickness = 2)
+  #         writeFrame(vws[[i]], frames[[i]])
+  #       })
+  #
+  #       counter <<- counter + 1
+  #       updateProgressBar(session, "pb", value = 100 * (counter / end))
+  #     }
+  #
+  #     if (counter > end) {
+  #       updateProgressBar(session, "pb", value = 100)
+  #       display <<- TRUE
+  #       record <<- FALSE
+  #       enable("displayImg")
+  #       enable("camera")
+  #       enable("zoom")
+  #       enable("focus")
+  #       enable("exposure")
+  #       enable("gain")
+  #       enable("brightness")
+  #       enable("interval")
+  #       enable("duration")
+  #       enable("savedir")
+  #       suppressWarnings(lapply(vws, release))
+  #     }
+  #   }
+  # }, ignoreNULL = TRUE)
+
+  observe({
     if (record == TRUE) {
       lapply(1:length(cams), function(i) readNext(cams[[i]], frames[[i]]))
       now <- as.numeric(Sys.time()) * 1000
 
-      if (now >= steps[counter]) {
-        ts <- getTextSize(as.character(now), thickness = 2)
-        lapply(1:length(cams), function(i) {
-          drawRectangle(frames[[i]], 1, 1, ts[2] + 20, ts[1] + 20, color = "white", thickness = -1)
-          drawText(frames[[i]], as.character(now), 10, 10, color = "black", thickness = 2)
-          writeFrame(vws[[i]], frames[[i]])
-        })
+      ts <- getTextSize(as.character(now), thickness = 2)
+      lapply(1:length(cams), function(i) {
+        drawRectangle(frames[[i]], 1, 1, ts[2] + 20, ts[1] + 20, color = "white", thickness = -1)
+        drawText(frames[[i]], as.character(now), 10, 10, color = "black", thickness = 2)
+        writeFrame(vws[[i]], frames[[i]])
+      })
 
-        counter <<- counter + 1
-        updateProgressBar(session, "pb", value = 100 * (counter / end))
-      }
+      updateProgressBar(session, "pb", value = 100 * (now - origTime) / (endRecordTime - origTime))
 
-      if (counter > end) {
+      if (now > endRecordTime) {
         updateProgressBar(session, "pb", value = 100)
         display <<- TRUE
         record <<- FALSE
@@ -185,10 +219,13 @@ function(input, output, session) {
         enable("interval")
         enable("duration")
         enable("savedir")
+        recordInterval <<- displayInterval
         suppressWarnings(lapply(vws, release))
       }
     }
-  }, ignoreNULL = TRUE)
+
+    invalidateLater(recordInterval - ((as.numeric(Sys.time()) * 1000 - origTime) %% recordInterval))
+  })
 
 
   #### Cleanup ####
