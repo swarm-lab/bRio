@@ -27,10 +27,10 @@ listCams <- function() {
 
     if (isStream(st)) {
       setProp(st, "FOURCC", fourcc("MJPG"))
-      setProp(st, "FRAME_WIDTH", 4096)
-      setProp(st, "FRAME_HEIGHT", 2160)
+      setProp(st, "FRAME_WIDTH", 1920)
+      setProp(st, "FRAME_HEIGHT", 1080)
 
-      if (getProp(st, "FRAME_WIDTH") == 4096 & getProp(st, "FRAME_HEIGHT") == 2160) {
+      if (getProp(st, "FRAME_WIDTH") == 1920 & getProp(st, "FRAME_HEIGHT") == 1080) {
         st
       } else {
         release(st)

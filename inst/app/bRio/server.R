@@ -1,10 +1,10 @@
 #### Server ####
 function(input, output, session) {
   display <- FALSE
-  displayTimer <- reactiveTimer(40, session)
+  displayTimer <- reactiveTimer(160, session)
   refreshDisplay <- reactiveVal(0)
   tmpDir <- tempdir()
-  frameSize <- c(2160, 4096) # c(1080, 1920)
+  frameSize <- c(1080, 1920) # c(2160, 4096) #
   frame <- zeros(frameSize[1], frameSize[2])
   toDisplay <- zeros(frameSize[1] / 3.2, frameSize[2] / 3.2)
   frames <- list()
