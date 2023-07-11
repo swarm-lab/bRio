@@ -40,23 +40,38 @@ fluidPage(
                     value = 128, min = 0, max = 255, step = 1)
       ),
 
-
       panel(heading = h4("Recording"),
             tags$table(
               width = "100%",
               style = "margin-bottom: 10px;",
               tags$tr(
                 tags$td(width = "49%",
-                        numericInput("interval", "Interval (sec)",
-                                     1, step = 0.02, min = 0, width = "100%")
+                        numericInput("blockN", "Number of blocks",
+                                     1, step = 1, min = 1, width = "100%")
                 ),
                 tags$td(width = "2%"),
                 tags$td(width = "49%",
-                        numericInput("duration", "Duration (sec)",
-                                     86400, step = 1, width = "100%")
+                        numericInput("blockInt", "Time b/w blocks (sec)",
+                                     3600, step = 1, width = "100%")
                 )
               ),
               tags$tr(height = "10px"),
+              tags$tr(
+                tags$td(width = "49%",
+                        numericInput("blockLength", "Block length (sec)",
+                                     600, step = 1, width = "100%")
+                ),
+                tags$td(width = "2%"),
+                tags$td(width = "49%",
+                        numericInput("frameInt", "Time b/w frames (sec)",
+                                     0.1, step = 0.01, min = 0, width = "100%")
+                )
+              )
+            ),
+            tags$hr(),
+            tags$table(
+              width = "100%",
+              style = "margin-bottom: 10px;",
               tags$tr(
                 tags$td(width = "49%",
                         shinyDirButton("savedir", "Save to...", "Select a folder",

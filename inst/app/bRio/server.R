@@ -9,12 +9,10 @@ function(input, output, session) {
   toDisplay <- zeros(frameSize[2], frameSize[1])
   frames <- list()
   vws <- list()
-  record <- FALSE
   recordInterval <- displayInterval
   endRecordTime <- origTime
-  counter <- 0
-  steps <- 0
-  end <- 0
+  block <- 0
+  blocks <- NULL
 
 
   #### Init ####
@@ -129,8 +127,8 @@ function(input, output, session) {
   })
 
   observeEvent(input$start, {
+    block <<- 1
     display <<- FALSE
-    record <<- TRUE
     disable("displayImg")
     disable("camera")
     disable("zoom")
@@ -138,77 +136,51 @@ function(input, output, session) {
     disable("exposure")
     disable("gain")
     disable("brightness")
-    disable("interval")
-    disable("duration")
+    disable("blockN")
+    disable("blockInt")
+    disable("blockLength")
+    disable("frameInt")
     disable("savedir")
     disable("start")
 
     path <- parseDirPath(volumes, input$savedir)
     vws <<- lapply(1:length(cams), function(i) {
-      videoWriter(paste0(path, "/Camera_", i, ".mp4"), "avc1", 25, frameSize[2], frameSize[1])
+      videoWriter(paste0(path, "/Camera_", i, ".mp4"), "avc1", 25,
+                  frameSize[2], frameSize[1])
+    })
+
+    today <- format(Sys.time(), "%F")
+    lapply(1:length(vws), function(i) {
+      frame %i*% 0
+      txt1 <- paste0("Camera ", i, ", Block 1")
+      ts <- rbind(getTextSize(txt1, font_scale = 2, thickness = 3),
+                  getTextSize(today, font_scale = 1.5, thickness = 2))
+      drawText(frame, txt1, (frameSize[1] / 2) - (ts[1, 2] / 2),
+               (frameSize[2] / 2) + (ts[1, 1] / 2), color = "white",
+               font_scale = 2, thickness = 3)
+      drawText(frame, today, (frameSize[1] / 2) - (ts[2, 2] / 2),
+               (frameSize[2] / 2) - 2 * ts[2, 1], color = "white",
+               font_scale = 1.5, thickness = 2)
+      lapply(1:25, function(j) writeFrame(vws[[i]], frame))
     })
 
     updateProgressBar(session, "pb", value = 0)
     frames <<- lapply(1:length(cams), function(i) readNext(cams[[i]]))
+    recordInterval <<- input$frameInt * 1000
     origTime <<- as.numeric(Sys.time()) * 1000
-    endRecordTime <<- origTime + input$duration * 1000
-    recordInterval <<- input$interval * 1000
+    blocks <<- data.frame(
+      start = origTime + (0:(input$blockN - 1)) * input$blockInt * 1000,
+      end = origTime + (0:(input$blockN - 1)) * input$blockInt * 1000 +
+        input$blockLength * 1000)
   }, ignoreInit = TRUE)
 
-  # observeEvent(recordTimer(), {
-  #   if (record == TRUE) {
-  #     lapply(1:length(cams), function(i) readNext(cams[[i]], frames[[i]]))
-  #     now <- as.numeric(Sys.time()) * 1000
-  #
-  #     if (now >= steps[counter]) {
-  #       ts <- getTextSize(as.character(now), thickness = 2)
-  #       lapply(1:length(cams), function(i) {
-  #         drawRectangle(frames[[i]], 1, 1, ts[2] + 20, ts[1] + 20, color = "white", thickness = -1)
-  #         drawText(frames[[i]], as.character(now), 10, 10, color = "black", thickness = 2)
-  #         writeFrame(vws[[i]], frames[[i]])
-  #       })
-  #
-  #       counter <<- counter + 1
-  #       updateProgressBar(session, "pb", value = 100 * (counter / end))
-  #     }
-  #
-  #     if (counter > end) {
-  #       updateProgressBar(session, "pb", value = 100)
-  #       display <<- TRUE
-  #       record <<- FALSE
-  #       enable("displayImg")
-  #       enable("camera")
-  #       enable("zoom")
-  #       enable("focus")
-  #       enable("exposure")
-  #       enable("gain")
-  #       enable("brightness")
-  #       enable("interval")
-  #       enable("duration")
-  #       enable("savedir")
-  #       suppressWarnings(lapply(vws, release))
-  #     }
-  #   }
-  # }, ignoreNULL = TRUE)
-
   observe({
-    if (record == TRUE) {
-      lapply(1:length(cams), function(i) readNext(cams[[i]], frames[[i]]))
-      now <- as.numeric(Sys.time()) * 1000
+    now <- as.numeric(Sys.time()) * 1000
 
-      ts <- getTextSize(as.character(now), thickness = 2)
-      lapply(1:length(cams), function(i) {
-        drawRectangle(frames[[i]], 1, 1, ts[2] + 20, ts[1] + 20, color = "white", thickness = -1)
-        drawText(frames[[i]], as.character(now), 10, 10, color = "black", thickness = 2)
-        writeFrame(vws[[i]], frames[[i]])
-      })
-
-      updateProgressBar(session, "pb", value = 100 * (now - origTime) / (endRecordTime - origTime))
-
-      if (now > endRecordTime) {
-        updateProgressBar(session, "pb", value = 100)
+    if (block > 0) {
+      if (block > nrow(blocks)) {
+        block <<- 0
         display <<- TRUE
-        record <<- FALSE
         enable("displayImg")
         enable("camera")
         enable("zoom")
@@ -216,15 +188,53 @@ function(input, output, session) {
         enable("exposure")
         enable("gain")
         enable("brightness")
-        enable("interval")
-        enable("duration")
+        enable("blockN")
+        enable("blockInt")
+        enable("blockLength")
+        enable("frameInt")
         enable("savedir")
         recordInterval <<- displayInterval
         suppressWarnings(lapply(vws, release))
+      } else {
+        if (now > blocks$end[block]) {
+          block <<- block + 1
+
+          if (block <= nrow(blocks)) {
+            today <- format(Sys.time(), "%F")
+            lapply(1:length(vws), function(i) {
+              frame %i*% 0
+              txt1 <- paste0("Camera ", i, ", Block ", block)
+              ts <- rbind(getTextSize(txt1, font_scale = 2, thickness = 3),
+                          getTextSize(today, font_scale = 1.5, thickness = 2))
+              drawText(frame, txt1, (frameSize[1] / 2) - (ts[1, 2] / 2),
+                       (frameSize[2] / 2) + (ts[1, 1] / 2), color = "white",
+                       font_scale = 2, thickness = 3)
+              drawText(frame, today, (frameSize[1] / 2) - (ts[2, 2] / 2),
+                       (frameSize[2] / 2) - 2 * ts[2, 1], color = "white",
+                       font_scale = 1.5, thickness = 2)
+              lapply(1:25, function(j) writeFrame(vws[[i]], frame))
+            })
+          }
+        } else {
+          if (now >= blocks$start[block]) {
+            lapply(1:length(cams), function(i) readNext(cams[[i]], frames[[i]]))
+            ts <- getTextSize(as.character(now), thickness = 2)
+            lapply(1:length(cams), function(i) {
+              drawRectangle(frames[[i]], 1, 1, ts[2] + 20, ts[1] + 20, color = "white", thickness = -1)
+              drawText(frames[[i]], as.character(now), 10, 10, color = "black", thickness = 2)
+              writeFrame(vws[[i]], frames[[i]])
+            })
+          }
+        }
       }
+
+      updateProgressBar(session, "pb", value = 100 * (now - blocks$start[1]) /
+                          (tail(blocks$end, n = 1) - blocks$start[1]))
     }
 
-    invalidateLater(recordInterval - ((as.numeric(Sys.time()) * 1000 - origTime) %% recordInterval))
+    invalidateLater(
+      recordInterval - ((as.numeric(Sys.time()) * 1000 - origTime) %% recordInterval)
+    )
   })
 
 
