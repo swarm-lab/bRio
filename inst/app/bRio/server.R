@@ -146,7 +146,7 @@ function(input, output, session) {
     path <- parseDirPath(volumes, input$savedir)
     vws <<- lapply(1:length(cams), function(i) {
       videoWriter(paste0(path, "/Camera_", i, ".mp4"), "avc1", 25,
-                  frameSize[2], frameSize[1])
+                  frameSize[2], frameSize[1], TRUE, "FFMPEG")
     })
 
     today <- format(Sys.time(), "%F")
@@ -233,7 +233,7 @@ function(input, output, session) {
     }
 
     invalidateLater(
-      recordInterval - ((as.numeric(Sys.time()) * 1000 - origTime) %% recordInterval)
+      max(recordInterval - ((as.numeric(Sys.time()) * 1000 - origTime) %% recordInterval), 1)
     )
   })
 

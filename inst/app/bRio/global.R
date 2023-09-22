@@ -7,7 +7,7 @@ library(Rvision)
 
 
 #### Custom functions ####
-listCams <- function(width = 1920, height = 1080) {
+listCams <- function(width = 1920, height = 1080, fps = 30) {
   if (Sys.info()["sysname"] == "Linux") {
     dev <- system2("ls", "/dev/video*", TRUE)
     dev_id <- as.numeric(gsub("/dev/video", "", dev))
@@ -27,9 +27,11 @@ listCams <- function(width = 1920, height = 1080) {
 
     if (isStream(st)) {
       setProp(st, "FOURCC", fourcc("MJPG"))
-      setProp(st, "FPS", 30)
+      setProp(st, "AUTO_EXPOSURE", 1)
+      setProp(st, "AUTOFOCUS", 0)
       setProp(st, "FRAME_WIDTH", width)
       setProp(st, "FRAME_HEIGHT", height)
+      setProp(st, "FPS", fps)
 
       if (getProp(st, "FRAME_WIDTH") == width & getProp(st, "FRAME_HEIGHT") == height) {
         st
@@ -49,5 +51,6 @@ listCams <- function(width = 1920, height = 1080) {
 
 #### Globals #####
 frameSize <- c(1920, 1080) # c(4096, 2160)
-cams <- listCams(frameSize[1], frameSize[2])
+fps <- 60
+cams <- listCams(frameSize[1], frameSize[2], fps)
 volumes <- c(Home = fs::path_home(), getVolumes()())
