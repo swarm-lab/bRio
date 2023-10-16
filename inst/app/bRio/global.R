@@ -32,6 +32,7 @@ listCams <- function(width = 1920, height = 1080, fps = 30) {
       setProp(st, "FRAME_WIDTH", width)
       setProp(st, "FRAME_HEIGHT", height)
       setProp(st, "FPS", fps)
+      setProp(st, "AUTO_WB", 0)
 
       if (getProp(st, "FRAME_WIDTH") == width & getProp(st, "FRAME_HEIGHT") == height) {
         st
