@@ -35,6 +35,8 @@ function(input, output, session) {
                       value = getProp(cams[[ix]], "GAIN"))
     updateSliderInput(session, "brightness",
                       value = getProp(cams[[ix]], "BRIGHTNESS"))
+    updateSliderInput(session, "temperature",
+                      value = getProp(cams[[ix]], "TEMPERATURE"))
     display <<- TRUE
   }, ignoreNULL = TRUE)
 
@@ -106,6 +108,13 @@ function(input, output, session) {
     if (!is.null(input$camera)) {
       ix <- as.numeric(gsub("Camera ", "", input$camera))
       setProp(cams[[ix]], "BRIGHTNESS", input$brightness)
+    }
+  })
+
+  observeEvent(input$temperature, {
+    if (!is.null(input$camera)) {
+      ix <- as.numeric(gsub("Camera ", "", input$camera))
+      setProp(cams[[ix]], "TEMPERATURE", input$temperature)
     }
   })
 

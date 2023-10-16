@@ -37,7 +37,9 @@ fluidPage(
         sliderInput("gain", "Gain", NULL, width = "100%",
                     value = 0, min = 0, max = 255, step = 1),
         sliderInput("brightness", "Brightness", NULL, width = "100%",
-                    value = 128, min = 0, max = 255, step = 1)
+                    value = 128, min = 0, max = 255, step = 1),
+        sliderInput("temperature", "Temperature", NULL, width = "100%",
+                    value = 4500, min = 2500, max = 10000, step = 10)
       ),
 
       panel(heading = h4("Recording"),
