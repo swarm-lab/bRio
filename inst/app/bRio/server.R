@@ -9,6 +9,8 @@ function(input, output, session) {
   toDisplay <- zeros(frameSize[2], frameSize[1])
   frames <- list()
   vws <- list()
+  ts <- matrix()
+  pos <- 0
   recordInterval <- displayInterval
   endRecordTime <- origTime
   block <- 0
@@ -158,6 +160,9 @@ function(input, output, session) {
                   frameSize[2], frameSize[1], TRUE, "FFMPEG")
     })
 
+    ts <<- matrix(NA, nrow = (25 + input$blockLength / input$frameInt) * input$blockN, ncol = 1)
+    pos <<- 26
+
     today <- format(Sys.time(), "%F")
     lapply(1:length(vws), function(i) {
       frame %i*% 0
@@ -203,12 +208,19 @@ function(input, output, session) {
         enable("frameInt")
         enable("savedir")
         recordInterval <<- displayInterval
-        suppressWarnings(lapply(vws, release))
+        # suppressWarnings(lapply(vws, release))
+        suppressWarnings(
+          lapply(vws, function(vw) {
+            write.csv(ts, paste0(vw$output(), ".csv"))
+            release(vw)
+          })
+        )
       } else {
         if (now > blocks$end[block]) {
           block <<- block + 1
 
           if (block <= nrow(blocks)) {
+            pos <<- pos + 25
             today <- format(Sys.time(), "%F")
             lapply(1:length(vws), function(i) {
               frame %i*% 0
@@ -227,10 +239,12 @@ function(input, output, session) {
         } else {
           if (now >= blocks$start[block]) {
             lapply(1:length(cams), function(i) readNext(cams[[i]], frames[[i]]))
-            ts <- getTextSize(as.character(now), thickness = 2)
+            ts[pos] <<- as.character(now)
+            pos <<- pos + 1
+            # ts <- getTextSize(as.character(now), thickness = 2)
             lapply(1:length(cams), function(i) {
               drawRectangle(frames[[i]], 1, 1, ts[2] + 20, ts[1] + 20, color = "white", thickness = -1)
-              drawText(frames[[i]], as.character(now), 10, 10, color = "black", thickness = 2)
+              # drawText(frames[[i]], as.character(now), 10, 10, color = "black", thickness = 2)
               writeFrame(vws[[i]], frames[[i]])
             })
           }
