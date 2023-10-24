@@ -238,13 +238,14 @@ function(input, output, session) {
           }
         } else {
           if (now >= blocks$start[block]) {
-            lapply(1:length(cams), function(i) readNext(cams[[i]], frames[[i]]))
+            # lapply(1:length(cams), function(i) readNext(cams[[i]], frames[[i]]))
             ts[pos] <<- as.character(now)
             pos <<- pos + 1
             # ts <- getTextSize(as.character(now), thickness = 2)
             lapply(1:length(cams), function(i) {
-              drawRectangle(frames[[i]], 1, 1, ts[2] + 20, ts[1] + 20, color = "white", thickness = -1)
+              # drawRectangle(frames[[i]], 1, 1, ts[2] + 20, ts[1] + 20, color = "white", thickness = -1)
               # drawText(frames[[i]], as.character(now), 10, 10, color = "black", thickness = 2)
+              readNext(cams[[i]], frames[[i]])
               writeFrame(vws[[i]], frames[[i]])
             })
           }
