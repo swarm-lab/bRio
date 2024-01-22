@@ -20,13 +20,15 @@ function(input, output, session) {
   #### Init ####
   observe({
     if (length(cams) > 0) {
-      updatePickerInput(session, "camera",
-                        choices = paste0("Camera ", 1:length(cams)))
+      l <- seq_along(cams)
+      names(l) <- paste0("Camera ", l)
+      updatePickerInput(session, "camera", choices = l)
+      updatePickerInput(session, "cameraRecord", choices = l)
     }
   })
 
   observeEvent(input$camera, {
-    ix <- as.numeric(gsub("Camera ", "", input$camera))
+    ix <- as.numeric(input$camera)
     setProp(cams[[ix]], "AUTOFOCUS", 0)
     updateSliderInput(session, "focus",
                       value = getProp(cams[[ix]], "FOCUS"))
@@ -46,7 +48,7 @@ function(input, output, session) {
   #### Display ####
   observe({
     if (display == TRUE) {
-      ix <- as.numeric(gsub("Camera ", "", isolate(input$camera)))
+      ix <- isolate(as.numeric(input$camera))
       readNext(cams[[ix]], frame)
 
       if (input$zoom > 1) {
@@ -63,16 +65,19 @@ function(input, output, session) {
       clock <- as.character(Sys.time(), 2L)
       drawRectangle(toDisplay, 1, 1, 442, 42, color = "white", thickness = -1)
       drawText(toDisplay, clock, 10, 10, color = "black", thickness = 2)
-      suppressMessages(write.Image(toDisplay, paste0(tmpDir, "/display.jpg"), TRUE))
+      suppressMessages(
+        write.Image(toDisplay, paste0(tmpDir, "/display.jpg"), TRUE)
+      )
       isolate(refreshDisplay(refreshDisplay() + 1))
     }
 
-    invalidateLater(displayInterval - ((as.numeric(Sys.time()) * 1000 - origTime) %% displayInterval))
+    invalidateLater(
+      displayInterval - ((as.numeric(Sys.time()) * 1000 - origTime) %% displayInterval)
+    )
   })
 
   output$displayImg <- renderImage({
     refreshDisplay()
-    ix <- as.numeric(gsub("Camera ", "", input$camera))
     iw <- frameSize[1]
     ih <- frameSize[2]
     ww <- session$clientData[["output_displayImg_width"]]
@@ -87,35 +92,35 @@ function(input, output, session) {
   #### Controls ####
   observeEvent(input$focus, {
     if (!is.null(input$camera)) {
-      ix <- as.numeric(gsub("Camera ", "", input$camera))
+      ix <- as.numeric(input$camera)
       setProp(cams[[ix]], "FOCUS", input$focus)
     }
   })
 
   observeEvent(input$exposure, {
     if (!is.null(input$camera)) {
-      ix <- as.numeric(gsub("Camera ", "", input$camera))
+      ix <- as.numeric(input$camera)
       setProp(cams[[ix]], "EXPOSURE", input$exposure)
     }
   })
 
   observeEvent(input$gain, {
     if (!is.null(input$camera)) {
-      ix <- as.numeric(gsub("Camera ", "", input$camera))
+      ix <- as.numeric(input$camera)
       setProp(cams[[ix]], "GAIN", input$gain)
     }
   })
 
   observeEvent(input$brightness, {
     if (!is.null(input$camera)) {
-      ix <- as.numeric(gsub("Camera ", "", input$camera))
+      ix <- as.numeric(input$camera)
       setProp(cams[[ix]], "BRIGHTNESS", input$brightness)
     }
   })
 
   observeEvent(input$temperature, {
     if (!is.null(input$camera)) {
-      ix <- as.numeric(gsub("Camera ", "", input$camera))
+      ix <- as.numeric(input$camera)
       setProp(cams[[ix]], "TEMPERATURE", input$temperature)
     }
   })
@@ -154,9 +159,10 @@ function(input, output, session) {
     disable("savedir")
     disable("start")
 
+    ix <- as.numeric(input$cameraRecord)
     path <- parseDirPath(volumes, input$savedir)
-    vws <<- lapply(1:length(cams), function(i) {
-      videoWriter(paste0(path, "/Camera_", i, ".mp4"), "avc1", 25,
+    vws <<- lapply(seq_along(ix), function(i) {
+      videoWriter(paste0(path, "/Camera_", ix[i], ".mp4"), "avc1", 25,
                   frameSize[2], frameSize[1], TRUE, "FFMPEG")
     })
 
@@ -164,9 +170,9 @@ function(input, output, session) {
     pos <<- 26
 
     today <- format(Sys.time(), "%F")
-    lapply(1:length(vws), function(i) {
+    lapply(seq_along(ix), function(i) {
       frame %i*% 0
-      txt1 <- paste0("Camera ", i, ", Block 1")
+      txt1 <- paste0("Camera ", ix[i], ", Block 1")
       ts <- rbind(getTextSize(txt1, font_scale = 2, thickness = 3),
                   getTextSize(today, font_scale = 1.5, thickness = 2))
       drawText(frame, txt1, (frameSize[1] / 2) - (ts[1, 2] / 2),
@@ -179,7 +185,7 @@ function(input, output, session) {
     })
 
     updateProgressBar(session, "pb", value = 0)
-    frames <<- lapply(1:length(cams), function(i) readNext(cams[[i]]))
+    frames <<- lapply(seq_along(ix), function(i) readNext(cams[[ix[i]]]))
     recordInterval <<- input$frameInt * 1000
     origTime <<- as.numeric(Sys.time()) * 1000
     blocks <<- data.frame(
@@ -208,7 +214,6 @@ function(input, output, session) {
         enable("frameInt")
         enable("savedir")
         recordInterval <<- displayInterval
-        # suppressWarnings(lapply(vws, release))
         suppressWarnings(
           lapply(vws, function(vw) {
             write.csv(ts, paste0(vw$output(), ".csv"))
@@ -222,9 +227,10 @@ function(input, output, session) {
           if (block <= nrow(blocks)) {
             pos <<- pos + 25
             today <- format(Sys.time(), "%F")
-            lapply(1:length(vws), function(i) {
+            ix <- as.numeric(input$cameraRecord)
+            lapply(seq_along(ix), function(i) {
               frame %i*% 0
-              txt1 <- paste0("Camera ", i, ", Block ", block)
+              txt1 <- paste0("Camera ", ix[i], ", Block ", block)
               ts <- rbind(getTextSize(txt1, font_scale = 2, thickness = 3),
                           getTextSize(today, font_scale = 1.5, thickness = 2))
               drawText(frame, txt1, (frameSize[1] / 2) - (ts[1, 2] / 2),
@@ -238,13 +244,10 @@ function(input, output, session) {
           }
         } else {
           if (now >= blocks$start[block]) {
-            # lapply(1:length(cams), function(i) readNext(cams[[i]], frames[[i]]))
             ts[pos] <<- as.character(now)
             pos <<- pos + 1
-            # ts <- getTextSize(as.character(now), thickness = 2)
-            lapply(1:length(cams), function(i) {
-              # drawRectangle(frames[[i]], 1, 1, ts[2] + 20, ts[1] + 20, color = "white", thickness = -1)
-              # drawText(frames[[i]], as.character(now), 10, 10, color = "black", thickness = 2)
+            ix <- as.numeric(input$cameraRecord)
+            lapply(seq_along(ix), function(i) {
               readNext(cams[[i]], frames[[i]])
               writeFrame(vws[[i]], frames[[i]])
             })
