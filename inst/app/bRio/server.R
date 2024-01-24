@@ -163,7 +163,7 @@ function(input, output, session) {
     path <- parseDirPath(volumes, input$savedir)
     vws <<- lapply(seq_along(ix), function(i) {
       videoWriter(paste0(path, "/Camera_", ix[i], ".mp4"), "avc1", 25,
-                  frameSize[2], frameSize[1], TRUE, "FFMPEG")
+                  frameSize[2], frameSize[1], TRUE, "ANY")
     })
 
     ts <<- matrix(NA, nrow = (25 + input$blockLength / input$frameInt) * input$blockN, ncol = 1)
